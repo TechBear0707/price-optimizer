@@ -2,6 +2,18 @@ import numpy as np
 from scipy.stats import linregress
 import pandas as pd
 
+df = pd.read_csv('elastic_input.csv')
+df['StayDate'] = pd.to_datetime(df['StayDate'], format='%m/%d/%y')
+df['AvgPrice'] = round(df['AvgPrice'], 0)
+#df.set_index('StayDate', inplace=True)
+
+# aggregate by ProductID, find top 30 selling products
+#top_products = df.groupby('ProductID')['Quantity'].sum().reset_index()
+#top_products = top_products.sort_values(by='Quantity', ascending=False)
+#top_products = top_products.head(30)
+
+# filter the data to only include the top 30 selling products
+#df = df[df['ProductID'].isin(top_products['ProductID'])]
 
 def find_elasticity(df, insert_mean=True):
     """
@@ -27,8 +39,8 @@ def find_elasticity(df, insert_mean=True):
             log_x = np.log(agg_df['AvgPrice'])
             log_y = np.log(agg_df['Quantity'])
             slope, intercept, r_value, p_value, std_err = linregress(log_x, log_y)
-            if p_value < 0.05 and slope < 0:
-                elastic_dict[product] = slope
+            if p_value < 0.05:
+                elastic_dict[product] = abs(slope)
             else:
                 elastic_dict[product] = abs(agg_slope)
     # only include products with significant p-values
@@ -40,8 +52,8 @@ def find_elasticity(df, insert_mean=True):
             log_x = np.log(agg_df['AvgPrice'])
             log_y = np.log(agg_df['Quantity'])
             slope, intercept, r_value, p_value, std_err = linregress(log_x, log_y)
-            if p_value < 0.05 and slope < 0:
-                elastic_dict[product] = slope
+            if p_value < 0.05:
+                elastic_dict[product] = abs(slope)
             else:
                 continue
 
@@ -58,4 +70,7 @@ def save_elasticity(df, insert_mean=True):
     """
     elastic_dict = find_elasticity(df, insert_mean)
     elastic_df = pd.DataFrame(list(elastic_dict.items()), columns=['ProductID', 'Elasticity'])
-    elastic_df.to_csv('elasticity.csv', index=False)
+    elastic_df.to_csv('product_elasticity.csv', index=False)
+
+
+save_elasticity(df, insert_mean=False)

@@ -3,7 +3,21 @@
   <component name="CsvFileAttributes">
     <option name="attributeMap">
       <map>
-        <entry key="/Show_Sales.csv">
+        <entry key="/Final_Corrected_Masked_Hotel_Data.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/elastic_input.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/forecast_input.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
@@ -11,6 +25,13 @@
           </value>
         </entry>
         <entry key="/optimal_prices.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/product_elasticity.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />

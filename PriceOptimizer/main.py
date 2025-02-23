@@ -1,59 +1,40 @@
 from lstm import *
 from elasticity import *
 import random
+from helper import *
 
 # read in the data
-df = pd.read_csv('Show_Sales.csv')
+df = pd.read_csv('forecast_input.csv')
+elastic_df = pd.read_csv('elastic_input.csv')
 df['StayDate'] = pd.to_datetime(df['StayDate'], format='%m/%d/%y')
 df['AvgPrice'] = round(df['AvgPrice'], 0)
-df.set_index('StayDate', inplace=True)
 
 # elasticity of each product
-elastic_dict = find_elasticity(df)
-print(elastic_dict)
+elastic_dict = find_elasticity(elastic_df, insert_mean=False)
 
-# product dict has product id as key, ticket types as values
-prod_dict = {}
-for product in df['ProductID'].unique():
-    sub_df = df[df['ProductID'] == product]
-    tickets = sub_df['TicketType'].unique()
-    prod_dict[product] = tickets
-
-# 50 random products
-prod_dict = dict(random.sample(prod_dict.items(), 50))
+# filter to products in df that have elastic values
+df = df[df['ProductID'].isin(elastic_dict.keys())]
 
 # forecast for all products
-forecast_df = lstm_forecast(df, prod_dict)
-
-def get_price(df, product_id, ticket_type):
-    '''
-    Returns the average price of a product from the past seven days
-
-    :param df: DataFrame that contains price per unit and quantity sold
-    :param product_id: The unique identifier for a product
-    :param ticket_type: The type of ticket for a product
-    :return: avg_price: The average price of a product from the past seven days
-    '''
-    sub_df = df.loc[df['ProductID'] == product_id]
-    sub_df = sub_df.loc[sub_df['TicketType'] == ticket_type]
-    sub_df = sub_df.tail(7)
-    avg_price = sub_df['AvgPrice'].mean()
-
-    return avg_price
-
+forecast_df = lstm_forecast(df, aggregate_by_product=True)
 
 # iterate through the forecast_df and find the optimal price for each product
 for index, col in forecast_df.iterrows():
     product_id = col['ProductID']
     ticket_type = col['TicketType']
-    avg_price = get_price(df, product_id, ticket_type)
+    avg_price = get_price(df, product_id, ticket_type=None, aggregate_by_product=True)
 
     # Initial price and quantity
     P0 = avg_price  # Initial price
     Q0 = forecast_df.at[index, 'Quantity']  # Initial quantity demanded
 
     # Price elasticity of demand
-    E = elastic_dict[product_id]  # Elasticity
+    # add a try except block to handle key errors
+    try:
+        E = elastic_dict[product_id]  # Elasticity
+    except KeyError:
+        # exit iteration if key error occurs
+        continue
 
     # create a list with values ranging from 0.5 to 1.5, with 0.05 increments
     max_revenue = 0
@@ -63,7 +44,7 @@ for index, col in forecast_df.iterrows():
     price_changes = np.arange(-0.5, 0.5, 0.01)
     for price_change in price_changes:
         new_price = P0 * (1 + price_change)
-        new_quantity = Q0 * (1 + (E * price_change))
+        new_quantity = Q0 * (1 + (-E * price_change))
         revenue = new_price * new_quantity
         if revenue > max_revenue:
             max_revenue = revenue
